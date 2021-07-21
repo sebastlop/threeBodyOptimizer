@@ -32,7 +32,7 @@ class optimize:
 
     def simpleRandomSerach(self, epochs=1, nSamples=100, center = [1,], radii = [1,]):
         '''Simple Random search algorithm samples with random nSamples points for each parameter 
-           to be optimized in the interval [center-radii, center+radii] '''
+           to be optimized in the interval [center-radii, center+radii]. Uses a bubble method to store the minimum '''
         assert len(radii) == self.nDim, 'please provide same dimension than number of for radii and center'
         self.history['optimizer'] = 'simpleRandomSerach'
         center = np.array(center)
@@ -56,11 +56,53 @@ class optimize:
                     sMin = s
             
             self.history['loss'].append( np.array( [sMin.flatten(), mini] ) )
-            print(f'epoch: {e} - loss:{round(mini,5)} - at: [ {round(sMin[0],4)} , {round(sMin[1],4)} ]')
+            print(f'epoch: {e} - loss:{round(mini,5)} - at: {[round(i,5) for i in sMin]}')
             #redefine center at minimum
             center = sMin
 
         return np.array( [sMin.flatten(), mini] ) 
+
+
+    def variableStepRandomSerach(self, epochs=1, nSamples=100, center = [1,], radii = [1,]):
+        '''This implementation of the Random search algorithm samples with uniform random nSamples points for each parameter 
+           to be optimized in the interval [center-radii, center+radii]. It stores a list with function values and redefine the radious
+           as the difference between two lower values of the function.
+           THIS METHOD DOES NOT GUARANTEE ANY CONVERGENCE TO A GLOBAL MINIMUM'''
+        assert len(radii) == self.nDim, 'please provide same dimension than number of for radii and center'
+        self.history['optimizer'] = 'simpleRandomSerach'
+        center = np.array(center)
+        radii = np.array(radii)
+        self.history['loss'] = []
+
+        
+        for e in range(epochs):
+            samples = np.random.uniform(center-radii,center+radii,size=(nSamples,self.nDim))
+
+            mini = []
+
+            for s in samples:
+            
+                for i in range(self.nDim):
+                    setattr(self.obj, self.optimizable[i] , s[i])
+            
+                next(self.obj)
+
+                mini.append(self.obj.loss())
+
+# TRY ONE with argmin ... TRY PERFORMANCE IT BY SORTING LIST!!!!
+            #with the list of lossess we pick the lowest value and set the center at this value
+            idx = np.argsort(mini)
+            center = samples[idx[0]]
+            radii = np.abs(center - samples[idx[1]])
+            #save the history
+            self.history['loss'].append( np.array( [samples[idx[0]].flatten(), mini[idx[0]]] ) )
+            print(f'epoch: {e} - loss:{round(mini[idx[0]],5)} - at: {[round(i,5) for i in center]} ]')
+
+            if radii.all()<1e-7:
+                print('convergence reached. radii:',radii)
+                break
+
+        return np.array( [samples[idx[0]].flatten(), mini[idx[0]] ] ) 
 
     
 class volumeSampler:

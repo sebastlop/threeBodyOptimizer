@@ -72,9 +72,11 @@ class threeBodyGR2:
         self.DiD2OnAxes0 = self.calculateDiD2OnAxes0()
         self.DiD2OnAxes1 = self.calculateDiD2OnAxes1()
 
-        # Hamilton quantities       
+        # Hamilton quantities
+        self.potEnergy = self.calculatePotEnergy()
+        self.localKineticEnergy = self.calculateLocalKineticEnergy()
         self.localEnergy = self.calculateLocEnergy()
-        self.contador = 0
+        self.lossCounter = 0
 
     def __next__(self):
         self.recalculate()
@@ -86,8 +88,8 @@ class threeBodyGR2:
 
     def loss(self):
         '''Here you can put a scalar function for optimize'''
-        self.contador+=1
-        return self.localEnergy.std()
+        self.lossCounter+=1
+        return self.localEnergy.std() + (self.potEnergy.mean()/self.localKineticEnergy.mean()+2)**2
 
     def provideNewVolume(self, vol):
         '''if you need to change the coordinates r1, r2, r12
@@ -128,16 +130,20 @@ class threeBodyGR2:
         self.DiD2OnAxes1 = self.calculateDiD2OnAxes1()
 
         # Hamilton quantities       
+        self.potEnergy = self.calculatePotEnergy()
+        self.localKineticEnergy = self.calculateLocalKineticEnergy()
         self.localEnergy = self.calculateLocEnergy()
 
     # From this point follow the basic methods for calculating the wave function and the local energy
     # Hamilton quantities
     def calculateLocEnergy(self):
-        auxiliar = (self.calculateK0() + self.calculateK1() + self.calculateK2() + self.calculateK02() + self.calculateK12() + self.calculatePotEnergy())/self.wavefunction
-        return auxiliar 
+        return self.localKineticEnergy + self.potEnergy
 
     def calculatePotEnergy(self):
-        return (-self.charge/self.r1 - self.charge/self.r2 + 1/self.r12)*self.wavefunction
+        return (-self.charge/self.r1 - self.charge/self.r2 + 1/self.r12)
+    
+    def calculateLocalKineticEnergy(self):
+        return (self.calculateK0() + self.calculateK1() + self.calculateK2() + self.calculateK02() + self.calculateK12())/self.wavefunction
 
     def calculateK0(self):
         return -0.5 * ( self.DDOnAxes0 + 2/self.r1 * self.DiOnAxis0)
